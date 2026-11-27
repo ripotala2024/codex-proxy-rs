@@ -1,4 +1,4 @@
-use codex_proxy_protocol_bridge::{manifest, plugin, PLUGIN_ID};
+use codex_proxy_protocol_bridge::{PLUGIN_ID, manifest, plugin};
 use gateway_plugin_sdk::client::{PluginSession, SessionConfig, SessionError};
 
 #[tokio::main(flavor = "current_thread")]

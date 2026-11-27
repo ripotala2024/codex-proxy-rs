@@ -77,23 +77,16 @@ async fn handle_http(mut call: HttpCall) -> Result<HttpResponse, PluginFault> {
             validate_request(&request).map_err(bridge_error)?;
             request.clone()
         }
-        SOURCE_RESPONSES => responses_to_messages_request(
-            &request,
-            &MessagesModelCapabilities::default(),
-        )
-        .map_err(bridge_error)?,
+        SOURCE_RESPONSES => {
+            responses_to_messages_request(&request, &MessagesModelCapabilities::default())
+                .map_err(bridge_error)?
+        }
         _ => unreachable!(),
     };
     let target = messages_to_genai_request(&messages).map_err(bridge_error)?;
     let target_body = serde_json::to_vec(&target)
         .map_err(|_| invalid_request("target request encoding failed"))?;
-    let stream = execute_genai(
-        &call,
-        client.client_key_id,
-        model.clone(),
-        target_body,
-    )
-    .await?;
+    let stream = execute_genai(&call, client.client_key_id, model.clone(), target_body).await?;
 
     let output = translate_stream(&call.host, stream, source, &request, model).await?;
     let requested_stream = request
@@ -182,8 +175,7 @@ async fn execute_genai(
             "model stream callback returned unexpected payload",
         ));
     }
-    serde_json::from_value(reply.result)
-        .map_err(|_| protocol_fault("invalid model stream handle"))
+    serde_json::from_value(reply.result).map_err(|_| protocol_fault("invalid model stream handle"))
 }
 
 async fn translate_stream(
@@ -194,8 +186,8 @@ async fn translate_stream(
     model: String,
 ) -> Result<Vec<Value>, PluginFault> {
     let mut genai = GenAiToMessagesStream::new(model);
-    let mut responses = (source == SOURCE_RESPONSES)
-        .then(|| MessagesToResponsesStream::new(original_request));
+    let mut responses =
+        (source == SOURCE_RESPONSES).then(|| MessagesToResponsesStream::new(original_request));
     let mut collected = Vec::new();
 
     loop {
@@ -207,12 +199,7 @@ async fn translate_stream(
                 let Some(data) = event_data(&event) else {
                     continue;
                 };
-                append_converted(
-                    &mut collected,
-                    &mut genai,
-                    responses.as_mut(),
-                    &data,
-                )?;
+                append_converted(&mut collected, &mut genai, responses.as_mut(), &data)?;
             }
         }
         if reply.end {
@@ -324,13 +311,16 @@ fn event_data(event: &ExecutionEvent) -> Option<Value> {
 fn sse_response(events: Vec<Value>) -> HttpResponse {
     let mut body = Vec::new();
     for event in events {
-        let event_type = event.get("type").and_then(Value::as_str).unwrap_or("message");
-        body.extend_from_slice(
-            format!("event: {event_type}\ndata: {}\n\n", event).as_bytes(),
-        );
+        let event_type = event
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or("message");
+        body.extend_from_slice(format!("event: {event_type}\ndata: {}\n\n", event).as_bytes());
     }
     let mut response = HttpResponse::new(200, HttpBody::from_bytes(body));
-    response.headers.push(header("content-type", "text/event-stream"));
+    response
+        .headers
+        .push(header("content-type", "text/event-stream"));
     response.headers.push(header("cache-control", "no-cache"));
     response
 }
@@ -364,7 +354,9 @@ fn json_response(
         message
     };
     let mut response = HttpResponse::new(200, HttpBody::from_bytes(value.to_string().into_bytes()));
-    response.headers.push(header("content-type", "application/json"));
+    response
+        .headers
+        .push(header("content-type", "application/json"));
     response
 }
 
@@ -390,4 +382,3 @@ fn bridge_error(error: TranslationError) -> PluginFault {
     };
     PluginFault::new(code, error.to_string())
 }
-

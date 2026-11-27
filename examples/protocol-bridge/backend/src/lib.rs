@@ -1,5 +1,5 @@
-mod manifest;
 mod bridge;
+mod manifest;
 
 pub use bridge::plugin;
 pub use manifest::manifest;
