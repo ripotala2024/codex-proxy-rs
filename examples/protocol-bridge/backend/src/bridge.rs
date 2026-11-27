@@ -86,9 +86,16 @@ async fn handle_http(mut call: HttpCall) -> Result<HttpResponse, PluginFault> {
     let target = messages_to_genai_request(&messages).map_err(bridge_error)?;
     let target_body = serde_json::to_vec(&target)
         .map_err(|_| invalid_request("target request encoding failed"))?;
-    let stream = execute_genai(&call, client.client_key_id, model.clone(), target_body).await?;
+    let host = call.host.clone();
+    let stream = execute_genai(
+        host.clone(),
+        client.client_key_id,
+        model.clone(),
+        target_body,
+    )
+    .await?;
 
-    let output = translate_stream(&call.host, stream, source, &request, model).await?;
+    let output = translate_stream(&host, stream, source, &request, model).await?;
     let requested_stream = request
         .get("stream")
         .and_then(Value::as_bool)
@@ -146,7 +153,7 @@ async fn collect_body(body: &mut HttpBody, maximum: usize) -> Result<Vec<u8>, Pl
 }
 
 async fn execute_genai(
-    call: &HttpCall,
+    host: gateway_plugin_sdk::client::HostClient,
     client_key_id: String,
     model: String,
     body: Vec<u8>,
@@ -160,8 +167,7 @@ async fn execute_genai(
         account_id: None,
         previous_response_id: None,
     };
-    let reply = call
-        .host
+    let reply = host
         .call(
             MODEL_EXECUTE_STREAM,
             serde_json::to_value(request)
