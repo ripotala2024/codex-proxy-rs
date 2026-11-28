@@ -16,9 +16,10 @@
 cargo fmt --manifest-path backend/Cargo.toml
 cargo test --manifest-path backend/Cargo.toml
 cargo build --release --manifest-path backend/Cargo.toml
+./package.sh x86_64-unknown-linux-gnu
 ```
 
-构建后的可执行文件需要按 `plugin.json` 的 `main` 字段放置为 `bin/plugin`，再使用宿主的 `cpr-plugin` 打包。
+`package.sh` 会构建目标平台二进制，并调用宿主的 `cpr-plugin` 生成安装包。需要先安装与宿主版本匹配的 `cpr-plugin`，也可以通过 `PLUGIN_CLI` 指定其路径。
 
 ## 当前边界
 
