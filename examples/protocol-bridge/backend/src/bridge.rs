@@ -103,7 +103,7 @@ async fn handle_http(mut call: HttpCall) -> Result<HttpResponse, PluginFault> {
     if requested_stream {
         Ok(sse_response(output))
     } else {
-        Ok(json_response(output, source, &request))
+        json_response(output, source, &request)
     }
 }
 
@@ -356,27 +356,29 @@ fn json_response(
     events: Vec<Value>,
     source: &str,
     original_request: &Map<String, Value>,
-) -> HttpResponse {
+) -> Result<HttpResponse, PluginFault> {
     let value = if source == SOURCE_RESPONSES {
-        let mut converter = MessagesToResponsesStream::new(original_request);
+        let converter = MessagesToResponsesStream::new(original_request);
         let mut message = Value::Null;
         let mut accumulator = MessagesAccumulator::default();
         for event in events {
-            if let Ok(Some(value)) = accumulator.push(&event) {
+            if let Some(value) = accumulator.push(&event).map_err(bridge_error)? {
                 message = value;
             }
-            let _ = converter.push(&event);
         }
         converter
             .complete_json_event(&message)
-            .unwrap_or_else(|_| json!({}))
+            .map_err(bridge_error)?
     } else {
         let mut accumulator = MessagesAccumulator::default();
         let mut message = Value::Null;
         for event in events {
-            if let Ok(Some(value)) = accumulator.push(&event) {
+            if let Some(value) = accumulator.push(&event).map_err(bridge_error)? {
                 message = value;
             }
+        }
+        if message.is_null() {
+            return Err(protocol_fault("upstream produced no complete message"));
         }
         message
     };
@@ -384,7 +386,7 @@ fn json_response(
     response
         .headers
         .push(header("content-type", "application/json"));
-    response
+    Ok(response)
 }
 
 fn header(name: &str, value: &str) -> gateway_plugin_sdk::call::middleware::MiddlewareHeader {
