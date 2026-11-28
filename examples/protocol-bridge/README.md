@@ -24,7 +24,7 @@ cargo build --release --manifest-path backend/Cargo.toml
 
 - 插件只处理 `/v1/messages` 和 `/v1/responses` 的 POST 请求。
 - `previous_response_id` 暂不跨协议续接。带该字段的请求会被拒绝，避免把客户端会话状态错误地交给转换层。
-- 目标上游固定为 `genai`，认证仍通过宿主 `verify_client`，模型执行仍通过 `host.model.execute_stream`。
+- 目标上游固定为 `genai`，认证仍通过宿主 `verify_client`。插件兼容 `Authorization`、`x-api-key` 和 `x-goog-api-key` 三种入口头。模型执行仍通过 `host.model.execute_stream`。
 - 插件不读取密钥，不实现路由、账号调度、额度、重试或计费。
 - 当前版本首先覆盖文本、工具调用、思考载荷和 usage 事件。多候选 GenAI 输出会按转换核心的单候选约束拒绝。
 

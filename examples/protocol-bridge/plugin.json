@@ -15,20 +15,24 @@
   "contributes": {
     "middleware": {
       "version": 6,
-      "stages": ["http"],
-      "inputFormats": ["anthropic", "openai", "genai"],
-      "outputFormats": ["anthropic", "openai", "genai"]
+      "stages": [
+        "http"
+      ],
+      "inputFormats": [
+        "anthropic",
+        "openai",
+        "genai"
+      ],
+      "outputFormats": [
+        "anthropic",
+        "openai",
+        "genai"
+      ]
     }
   },
   "configurationSchema": {
     "type": "object",
-    "properties": {
-      "targetProtocol": {
-        "type": "string",
-        "enum": ["genai"],
-        "default": "genai"
-      }
-    },
+    "properties": {},
     "additionalProperties": false
   }
 }

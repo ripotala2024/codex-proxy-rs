@@ -128,12 +128,33 @@ fn parse_object(body: &[u8]) -> Result<Map<String, Value>, PluginFault> {
 fn authorization_header(
     headers: &[gateway_plugin_sdk::call::middleware::MiddlewareHeader],
 ) -> Result<String, PluginFault> {
-    let header = headers
+    if let Some(header) = headers
         .iter()
         .find(|header| header.name.eq_ignore_ascii_case("authorization"))
+    {
+        let value = String::from_utf8(header.value.clone())
+            .map_err(|_| invalid_request("authorization header is not valid UTF-8"))?;
+        if value.trim().is_empty() {
+            return Err(invalid_request("authorization header is empty"));
+        }
+        return Ok(value);
+    }
+
+    let key = headers
+        .iter()
+        .find(|header| header.name.eq_ignore_ascii_case("x-api-key"))
+        .or_else(|| {
+            headers
+                .iter()
+                .find(|header| header.name.eq_ignore_ascii_case("x-goog-api-key"))
+        })
         .ok_or_else(|| invalid_request("authorization header is required"))?;
-    String::from_utf8(header.value.clone())
-        .map_err(|_| invalid_request("authorization header is not valid UTF-8"))
+    let value = String::from_utf8(key.value.clone())
+        .map_err(|_| invalid_request("API key header is not valid UTF-8"))?;
+    if value.trim().is_empty() {
+        return Err(invalid_request("API key header is empty"));
+    }
+    Ok(format!("Bearer {value}"))
 }
 
 async fn collect_body(body: &mut HttpBody, maximum: usize) -> Result<Vec<u8>, PluginFault> {
@@ -387,4 +408,35 @@ fn bridge_error(error: TranslationError) -> PluginFault {
         TranslationError::InvalidEvent(_) | TranslationError::IncompleteStream => ErrorCode::Fault,
     };
     PluginFault::new(code, error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gateway_plugin_sdk::call::middleware::MiddlewareHeader;
+
+    fn request_header(name: &str, value: &str) -> MiddlewareHeader {
+        MiddlewareHeader {
+            name: name.to_owned(),
+            value: value.as_bytes().to_vec(),
+        }
+    }
+
+    #[test]
+    fn preserves_authorization_header_scheme() {
+        let headers = [request_header("authorization", "Basic external-credential")];
+        assert_eq!(authorization_header(&headers).unwrap(), "Basic external-credential");
+    }
+
+    #[test]
+    fn canonicalizes_anthropic_api_key() {
+        let headers = [request_header("x-api-key", "sk-anthropic")];
+        assert_eq!(authorization_header(&headers).unwrap(), "Bearer sk-anthropic");
+    }
+
+    #[test]
+    fn canonicalizes_genai_api_key() {
+        let headers = [request_header("x-goog-api-key", "sk-genai")];
+        assert_eq!(authorization_header(&headers).unwrap(), "Bearer sk-genai");
+    }
 }
