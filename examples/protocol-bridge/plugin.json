@@ -1,0 +1,38 @@
+{
+  "manifestVersion": 2,
+  "name": "protocol-bridge",
+  "displayName": "协议桥接",
+  "publisher": "ripotala2024",
+  "version": "0.1.0",
+  "description": "在官方 Middleware 插件边界中恢复 Messages、Responses 与 GenAI 的 HTTP JSON/SSE 协议桥接",
+  "license": "Apache-2.0",
+  "author": "Sirius",
+  "engines": {
+    "codex-proxy-rs": ">=3.56.0, <4.0.0"
+  },
+  "main": "bin/plugin",
+  "runtime": "trustedProcess",
+  "contributes": {
+    "middleware": {
+      "version": 6,
+      "stages": [
+        "http"
+      ],
+      "inputFormats": [
+        "anthropic",
+        "openai",
+        "genai"
+      ],
+      "outputFormats": [
+        "anthropic",
+        "openai",
+        "genai"
+      ]
+    }
+  },
+  "configurationSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  }
+}

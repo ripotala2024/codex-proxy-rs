@@ -1,0 +1,37 @@
+[package]
+name = "codex-proxy-protocol-bridge"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+autotests = false
+rust-version = "1.99.1"
+
+[[test]]
+name = "bridge"
+path = "tests/main.rs"
+
+[dependencies]
+cpr-protocol-bridge-core = { path = "bridge-core" }
+gateway-plugin-sdk = { git = "https://github.com/ripotala2024/codex-proxy-rs.git", rev = "8acf376091ab71774acab54440c25750c119bb69", features = ["io"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.150", features = ["arbitrary_precision", "preserve_order"] }
+tokio = { version = "1.53.3", default-features = false, features = ["io-std", "macros", "rt", "sync", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1.53.3", default-features = false, features = ["io-util", "process", "test-util"] }
+
+[lints.rust]
+warnings = "deny"
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = 10 }
+needless_collect = { level = "deny", priority = 8 }
+
+[profile.release]
+debug = false
+strip = "symbols"
+lto = "thin"
+codegen-units = 1
+panic = "abort"
