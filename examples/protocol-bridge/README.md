@@ -4,7 +4,7 @@
 
 - `POST /v1/messages` → GenAI 上游 → Messages 响应
 - `POST /v1/responses` → GenAI 上游 → Responses 响应
-- JSON 和 SSE 两种返回形态
+- JSON 和 SSE 两种返回形态。当前 SSE 事件会在插件内完成转换后聚合交付，尚未实现逐事件实时转发
 
 协议转换核心位于 `backend/bridge-core`。它从 v3.55 的 `gateway-protocol` 转换模块提取而来，插件本身只负责 HTTP 入口、宿主回调和流事件编排。原始 GenAI 端点不会被插件拦截。
 
